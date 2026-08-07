@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('ds', {
   hide: () => ipcRenderer.invoke('window:hide'),
   moveTo: (x, y) => ipcRenderer.invoke('window:move-to', x, y),
   moveBy: (dx, dy) => ipcRenderer.invoke('window:move-by', dx, dy),
+  setIgnoreMouseEvents: (v) => ipcRenderer.invoke('window:set-ignore-mouse', v),
+  setDragActive: (v) => ipcRenderer.invoke('window:set-drag-active', v),
   getPosition: () => ipcRenderer.invoke('window:get-position'),
   notify: (title, body) => ipcRenderer.invoke('app:notify', title, body),
   showContextMenu: () => ipcRenderer.invoke('card:context-menu'),

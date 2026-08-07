@@ -6,7 +6,10 @@
   const COLS = 36;
   const ROWS = 26;
   const DAMPING = 0.985;
-  const GRAVITY = 0.05;
+  const GRAVITY = 0.07;
+  const FRAME_MS = 16.7;      // 估算帧时长，用于把拖动速度折算成每帧位移
+  const AIR_DRAG = 0.004;     // 布料自身速度的空气阻尼（用于回落稳定）
+  const DRAG_LAG = 0.020;     // 以抓取点为中心的拖曳系数：越远的布料越滞后
   const WIND_X = 0.011;   // 水平摆动力
   const WIND_Z = 0.030;   // 竖向褶皱波力
   const Z_DAMP = 0.985;   // z 回弹阻尼
@@ -169,15 +172,16 @@
       const flutter = 1 + Math.min(0.5, speed * SPEED_FLUTTER);
       // 噪声驱动阵风：风势忽强忽弱，像真实气流一样不规律
       const gust = 0.7 + 0.65 * noise(3.7, 9.2, t * 0.00022);
-      const windX = (Math.sin(t * 0.0024) * 2.1 + Math.sin(t * 0.0012) * 1.0) * gust * flutter;
-      // 惯性耦合：拖动加速时布料滞后、减速/停止时前甩，方向与加速度相反
-      const inertiaX = -dragAX * DRAG_INERTIA * 16.7;
-      const inertiaY = -dragAY * DRAG_INERTIA * 16.7;
+      // 风效开关：关闭后不再自动飘动，只保留拖拽/重力效果
+      const windX = windEnabled
+        ? (Math.sin(t * 0.0024) * 2.1 + Math.sin(t * 0.0012) * 1.0) * gust * flutter
+        : 0;
       dragVX *= DRAG_DECAY;
       dragVY *= DRAG_DECAY;
       dragAX *= DRAG_DECAY;
       dragAY *= DRAG_DECAY;
       const h = this.h;
+      const diagRef = Math.hypot(this.w, this.h) * 0.5;
       for (const p of this.pts) {
         if (p.pinned || p.idx === this.grabPin) {
           // 抓取点本身向观察者隆起，形成被手指捏起的 3D 形态
@@ -188,15 +192,26 @@
         const vx = (p.x - p.px) * DAMPING;
         const vy = (p.y - p.py) * DAMPING;
         const vz = (p.z - p.pz) * DAMPING;
+        const lx = p.x - p.px;  // 本帧局部速度（用于空气阻力）
+        const ly = p.y - p.py;
         p.px = p.x; p.py = p.y; p.pz = p.z;
-        p.x += vx + windX * WIND_X + inertiaX;
-        p.y += vy + GRAVITY + inertiaY;
-        // 褶皱：平滑噪声场随空间/时间演化，褶皱在任意位置出现；
-        // 幅度按"离手指抓取点越远越明显"计算
-        const dPin = this.grabPin >= 0
+        // 以抓取点为中心的拖曳：手边几乎不滞后，越远的布料越拖在后面，
+        // 模拟“手抓住一点把柔软卡片拽过去，布尾跟着走”的真实情景
+        const dg = this.grabPin >= 0
           ? Math.hypot(p.x - this.grabX, p.y - this.grabY)
           : p.y;
-        const depth = 0.15 + 0.85 * Math.min(1, dPin / (h * 0.55));
+        const distFactor = Math.min(1, dg / diagRef);
+        const lagX = -DRAG_LAG * dragVX * FRAME_MS * distFactor;
+        const lagY = -DRAG_LAG * dragVY * FRAME_MS * distFactor;
+        const inertiaX = -dragAX * DRAG_INERTIA * 16.7 * distFactor;
+        const inertiaY = -dragAY * DRAG_INERTIA * 16.7 * distFactor;
+        const airX = -AIR_DRAG * lx;
+        const airY = -AIR_DRAG * ly;
+        p.x += vx + windX * WIND_X + inertiaX + lagX + airX;
+        p.y += vy + GRAVITY + inertiaY + lagY + airY;
+        // 褶皱：平滑噪声场随空间/时间演化，褶皱在任意位置出现；
+        // 幅度按"离手指抓取点越远越明显"计算
+        const depth = 0.15 + 0.85 * Math.min(1, dg / (h * 0.55));
         const edge = Math.min(1, p.x / (this.w * 0.06), (this.w - p.x) / (this.w * 0.06));
         const n = turbulence(p.x, p.y, t * 0.00022);
         p.z += vz + windX * WIND_Z * depth * n * edge;
@@ -486,6 +501,7 @@
   let offsetY = 0;
   let settleTimer = null;
   let creaseEnabled = false;
+  let windEnabled = true;
 
   const light = (() => {
     // 正面为主的柔光，避免左上光照让左右两侧明暗明显不对称
@@ -535,6 +551,7 @@
     canvas.style.top = '0px';
     canvas.style.display = 'block';
     creaseEnabled = !!(opts && opts.crease);
+    windEnabled = !(opts && opts.wind === false);
     ctx2d = canvas.getContext('2d');
     if (!shadeCanvas) {
       shadeCanvas = document.createElement('canvas');

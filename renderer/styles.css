@@ -54,6 +54,7 @@ body {
 }
 
 #app {
+  position: relative;
   width: 100%;
   height: 100%;
   padding: 14px;
@@ -66,9 +67,12 @@ body {
 
 /* ---------- 卡片 ---------- */
 .card {
-  position: relative;
-  width: 100%;
-  height: 100%;
+  /* 固定尺寸并置于窗口左上，拖拽时窗口向下扩展的空间留给布料垂挂 */
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 328px;
+  height: 220px;
   display: flex;
   flex-direction: column;
   border-radius: 18px;
@@ -459,8 +463,11 @@ select:focus {
 
 /* ---------- 折叠圆点 ---------- */
 .dot {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: linear-gradient(135deg, #1d4ed8, #3b82f6);
   border: 1px solid rgba(255, 255, 255, 0.25);
@@ -505,9 +512,11 @@ select:focus {
 
 /* ---------- 迷你卡片 ---------- */
 .mini {
-  position: relative;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 188px;
+  height: 60px;
   display: flex;
   align-items: center;
   gap: 6px;

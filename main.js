@@ -12,8 +12,9 @@ const fs = require('fs');
 
 // 窗口比卡片大一圈，四周留 14px 透明边距：布料网格可完整覆盖卡片，
 // 甩动位移有足够余量，不会被窗口边缘裁切，也不会露出透明缝隙
+// 卡片固定在上部，窗口下方保留约 300px 透明空间给布料垂挂（透明区鼠标穿透）
 const CARD_W = 356;
-const CARD_H = 248;
+const CARD_H = 560;
 const MINI_W = 216;
 const MINI_H = 88;
 const DOT_W = 74;
@@ -34,6 +35,7 @@ const DEFAULT_CONFIG = {
   alwaysOnTop: true,
   autoLaunch: false,
   creaseShadow: false,            // 褶皱折痕阴影（z 落差明暗），默认关闭
+  windEnabled: true,              // 风效（自动飘动），默认开启
   mode: 'card',                   // card | mini | dot
   pos: null,                      // { x, y }
 };
@@ -167,6 +169,7 @@ function createWindow() {
               themeValue: $('set-theme') ? $('set-theme').value : null,
               ontopChecked: $('set-ontop') ? $('set-ontop').checked : null,
               autostartChecked: $('set-autostart') ? $('set-autostart').checked : null,
+              windChecked: $('set-wind') ? $('set-wind').checked : null,
               creaseChecked: $('set-crease') ? $('set-crease').checked : null,
               contrast: {
                 select: styleOf(sel),
@@ -675,6 +678,31 @@ function setWindowMode(mode) {
   win.webContents.send('mode:changed', mode);
 }
 
+let mouseIgnore = false;
+let dragActive = false;
+
+// 各形态下卡片在窗口内的可交互区域（DIP）
+function interactiveRect(mode) {
+  if (mode === 'mini') return { x: 14, y: 14, w: 188, h: 60 };
+  if (mode === 'dot') return { x: 14, y: 14, w: 46, h: 46 };
+  return { x: 14, y: 14, w: 328, h: 220 };
+}
+
+// 主进程轮询光标：在卡片上时窗口接收事件，在透明区时穿透到桌面
+function pollMouseIgnore() {
+  if (!win || dragActive) return;
+  const p = screen.getCursorScreenPoint();
+  const [wx, wy] = win.getPosition();
+  const r = interactiveRect(config.mode || 'card');
+  const over = p.x >= wx + r.x && p.x <= wx + r.x + r.w &&
+    p.y >= wy + r.y && p.y <= wy + r.y + r.h;
+  const want = !over;
+  if (want !== mouseIgnore) {
+    mouseIgnore = want;
+    win.setIgnoreMouseEvents(want, { forward: true });
+  }
+}
+
 function setAlwaysOnTopFlag(value) {
   config.alwaysOnTop = value;
   saveConfig();
@@ -860,6 +888,22 @@ function registerIpc() {
     win.setPosition(x + Math.round(dx), y + Math.round(dy));
   });
 
+  // 透明区域鼠标穿透：只有卡片区域接收鼠标事件，空白区点击穿透到桌面
+  ipcMain.handle('window:set-ignore-mouse', (_e, ignore) => {
+    if (!win) return;
+    mouseIgnore = !!ignore;
+    win.setIgnoreMouseEvents(!!ignore, { forward: true });
+  });
+
+  // 拖拽期间锁定为接收鼠标事件，避免快速拖动时被误判为离开卡片
+  ipcMain.handle('window:set-drag-active', (_e, v) => {
+    dragActive = !!v;
+    if (dragActive && win) {
+      mouseIgnore = false;
+      win.setIgnoreMouseEvents(false, { forward: true });
+    }
+  });
+
   ipcMain.handle('card:context-menu', () => showCardMenu());
 }
 
@@ -891,6 +935,7 @@ if (!gotLock) {
     }
     registerIpc();
     createWindow();
+    setInterval(pollMouseIgnore, 60);
     buildTray();
     if (config.autoLaunch) {
       // 同步系统真实的开机自启状态

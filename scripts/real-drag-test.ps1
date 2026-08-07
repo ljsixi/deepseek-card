@@ -20,8 +20,10 @@ if (-not $proc) { Write-Error 'card window not found'; exit 1 }
 
 $r = New-Object MouseTest2+RECT
 [MouseTest2]::GetWindowRect($proc.MainWindowHandle, [ref]$r) | Out-Null
-$cx = [int](($r.Left + $r.Right) / 2)
-$cy = [int](($r.Top + $r.Bottom) / 2)
+# 200% DPI 下 GetWindowRect/SetCursorPos 是物理像素，卡片偏移要先按缩放换算
+$scale = ($r.Right - $r.Left) / 356.0
+$cx = [int]($r.Left + $scale * (14 + 164))   # 卡片中心（偏移 14,14，尺寸 328x220，均为 DIP）
+$cy = [int]($r.Top + $scale * (14 + 110))
 $start = "x=$($r.Left) y=$($r.Top) size=$($r.Right - $r.Left)x$($r.Bottom - $r.Top)"
 
 # 按下

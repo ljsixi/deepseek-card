@@ -47,6 +47,7 @@ function applyTheme(theme) {
 /* ---------- 视图切换 ---------- */
 
 let settingsOpen = false;
+let draggingCard = false;
 
 function applyMode(mode) {
   state.config.mode = mode;
@@ -210,6 +211,8 @@ function makeDraggable(el, { skip, onClick, cloth = false } = {}) {
   let drag = null;
 
   el.addEventListener('pointerdown', (e) => {
+    draggingCard = true;
+    if (window.ds && window.ds.setDragActive) window.ds.setDragActive(true);
     if (e.button !== 0) return;
     if (skip && e.target.closest(skip)) return;
     // 先同步建立拖拽状态，确保截屏期间移动也能正常跟随
@@ -257,7 +260,10 @@ function makeDraggable(el, { skip, onClick, cloth = false } = {}) {
           if (window.ClothFX) window.ClothFX.stop();
           return;
         }
-        const clothOpts = { crease: !!(state.config && state.config.creaseShadow) };
+        const clothOpts = {
+          crease: !!(state.config && state.config.creaseShadow),
+          wind: !(state.config && state.config.windEnabled === false),
+        };
         if (window.ClothFX) await window.ClothFX.start(el, src, grab, clothOpts);
         if (drag) el.classList.add('cloth-active');
       })();
@@ -294,6 +300,8 @@ function makeDraggable(el, { skip, onClick, cloth = false } = {}) {
   });
 
   const end = () => {
+    draggingCard = false;
+    if (window.ds && window.ds.setDragActive) window.ds.setDragActive(false);
     if (!drag) return;
     const wasDrag = drag.moved;
     if (drag.raf) cancelAnimationFrame(drag.raf);
@@ -372,6 +380,7 @@ function fillSettings() {
   $('set-theme').value = cfg.theme === 'light' ? 'light' : 'dark';
   $('set-ontop').checked = !!cfg.alwaysOnTop;
   $('set-autostart').checked = !!cfg.autoLaunch;
+  $('set-wind').checked = !!cfg.windEnabled;
   $('set-crease').checked = !!cfg.creaseShadow;
   $('test-result').textContent = '';
 }
@@ -385,6 +394,7 @@ async function saveSettings() {
     theme: $('set-theme').value,
     alwaysOnTop: $('set-ontop').checked,
     autoLaunch: $('set-autostart').checked,
+    windEnabled: $('set-wind').checked,
     creaseShadow: $('set-crease').checked,
   };
   const keyChanged = patch.apiKey !== state.config.apiKey;
