@@ -14,7 +14,7 @@
   const DRAG_DECAY = 0.90;   // 拖动速度/加速度每帧衰减
   const DRAG_INERTIA = 0.45; // 拖动加速度 -> 惯性反推力系数
   const SPEED_FLUTTER = 0.20; // 拖动速度对风力的增益（速度越快越飘）
-  const Z_MAX = 12;           // 褶皱深度上限（配合边界软墙，防止投影超出窗口）
+  const Z_MAX = 10;           // 褶皱深度上限（配合边界软墙，防止投影超出窗口）
   // 窗口四周已有 14px 透明边距，布料网格直接完整覆盖卡片，不内缩
   const MARGIN = 0;
 
@@ -141,7 +141,9 @@
         const depth = 0.25 + 0.75 * Math.min(1, p.y / h);
         const ridge = Math.sin(p.x * 0.075 + t * 0.0021);
         const swell = 0.8 + 0.2 * Math.sin(p.y * 0.04 + t * 0.0011);
-        p.z += vz + windX * WIND_Z * depth * ridge * swell;
+        // 边缘衰减：左右边缘的褶皱减弱，避免自由角被吹卷成折叠状态
+        const edge = Math.min(1, p.x / (this.w * 0.10), (this.w - p.x) / (this.w * 0.10));
+        p.z += vz + windX * WIND_Z * depth * ridge * swell * edge;
         p.z *= Z_DAMP; // 轻微回弹，避免越吹越远
       }
       // 约束求解
@@ -365,7 +367,8 @@
   let offsetY = 0;
 
   const light = (() => {
-    const lx = 0.35, ly = -0.5, lz = 0.79;
+    // 正面为主的柔光，避免左上光照让左右两侧明暗明显不对称
+    const lx = 0.12, ly = -0.22, lz = 0.97;
     const l = Math.hypot(lx, ly, lz);
     return { x: lx / l, y: ly / l, z: lz / l };
   })();
@@ -439,10 +442,10 @@
     const marginT = rect.top;
     const marginB = winH - rect.bottom;
     cloth = new Cloth(w, h, {
-      wallL: -marginL + 3,   // 预留 z 投影余量（z*0.24）
-      wallR: w + marginR - 3,
-      wallT: -marginT + 2,   // 预留 z 投影余量（z*0.12）
-      wallB: h + marginB - 2,
+      wallL: -marginL + 4,   // 预留 z 投影 + 三角形外扩余量，杜绝边缘被裁
+      wallR: w + marginR - 4,
+      wallT: -marginT + 3,
+      wallB: h + marginB - 3,
     });
     frames = 0;
     firstBadFrame = -1;
@@ -522,6 +525,14 @@
             }
           }
           return n ? +(s / n).toFixed(1) : null;
+        })() : null,
+        cornerZ: cloth ? (() => {
+          const bl = cloth.pts[(ROWS - 1) * COLS];
+          const br = cloth.pts[(ROWS - 1) * COLS + (COLS - 1)];
+          return {
+            bottomLeft: Math.round(bl.z * 10) / 10,
+            bottomRight: Math.round(br.z * 10) / 10,
+          };
         })() : null,
       };
     },

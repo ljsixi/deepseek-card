@@ -246,6 +246,7 @@ function createWindow() {
             let opaque = 0, n = 0, sum = 0, sum2 = 0;
             let shadeFringeCalm = 0;
             const bottomRows = [];
+            let leftLum = 0, leftN = 0, rightLum = 0, rightN = 0;
             const grid = [];
             const G = 8;
             const asciiRows = [];
@@ -290,6 +291,23 @@ function createWindow() {
                 sum += lum; sum2 += lum * lum; n++;
               }
             }
+            // 左右明暗对比：取样卡片左右两侧区域的平均亮度
+            for (let y = Math.floor(canvas.height * 0.15); y < Math.floor(canvas.height * 0.85); y++) {
+              for (let x = Math.floor(canvas.width * 0.25); x < Math.floor(canvas.width * 0.40); x++) {
+                const j = (y * canvas.width + x) * 4;
+                if (img[j + 3] > 10) {
+                  leftLum += 0.299 * img[j] + 0.587 * img[j + 1] + 0.114 * img[j + 2];
+                  leftN++;
+                }
+              }
+              for (let x = Math.floor(canvas.width * 0.60); x < Math.floor(canvas.width * 0.75); x++) {
+                const j = (y * canvas.width + x) * 4;
+                if (img[j + 3] > 10) {
+                  rightLum += 0.299 * img[j] + 0.587 * img[j + 1] + 0.114 * img[j + 2];
+                  rightN++;
+                }
+              }
+            }
             for (let y = Math.floor(canvas.height * 0.86); y < canvas.height; y++) {
               for (let x = Math.floor(canvas.width * 0.85); x < canvas.width; x++) {
                 const j = (y * canvas.width + x) * 4;
@@ -330,6 +348,10 @@ function createWindow() {
                 ascii: asciiRows,
                 shadeFringeCalm,
                 bottomRows,
+                sideLum: {
+                  left: leftN ? +(leftLum / leftN).toFixed(1) : null,
+                  right: rightN ? +(rightLum / rightN).toFixed(1) : null,
+                },
               },
             };
           })()`);
