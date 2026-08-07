@@ -40,6 +40,13 @@ function levelColor(level) {
   return root.getPropertyValue(`--${level === 'ok' ? 'ok' : level === 'mid' ? 'warn' : 'danger'}`).trim();
 }
 
+// 余额等级色 + 同色柔光：数字的“光”即账户健康状态（三种形态共用）
+function applyLevelColor(el, color) {
+  if (!el) return;
+  el.style.color = color;
+  el.style.textShadow = `0 0 24px ${color.replace('rgb(', 'rgba(').replace(')', ', 0.30)')}`;
+}
+
 function applyTheme(theme) {
   document.body.dataset.theme = theme === 'light' ? 'light' : 'dark';
 }
@@ -88,12 +95,13 @@ function renderBalance() {
 
   if (!state.config || !state.config.apiKey) {
     $('balance-main').textContent = '--';
-    $('balance-breakdown').textContent = '未配置 API Key，点击 ⚙ 设置';
+    $('balance-main').style.color = '';
+    $('balance-main').style.textShadow = '';
     setStatus('idle', '未配置 API Key');
-    $('progress-fill').style.width = '0%';
     $('dot-balance').textContent = 'DS';
     $('mini-balance').textContent = '--';
     $('mini-balance').style.color = '';
+    $('mini-balance').style.textShadow = '';
     $('mini-status').textContent = '未配置 API Key';
     return;
   }
@@ -104,6 +112,7 @@ function renderBalance() {
     $('dot-balance').textContent = '…';
     $('mini-balance').textContent = '…';
     $('mini-balance').style.color = '';
+    $('mini-balance').style.textShadow = '';
     $('mini-status').textContent = '查询中…';
     return;
   }
@@ -113,6 +122,7 @@ function renderBalance() {
     $('dot-balance').textContent = '!';
     $('mini-balance').textContent = '!';
     $('mini-balance').style.color = '';
+    $('mini-balance').style.textShadow = '';
     $('mini-status').textContent = state.errorMsg;
     return;
   }
@@ -122,39 +132,24 @@ function renderBalance() {
   const infos = Array.isArray(data?.balance_infos) ? data.balance_infos : [];
   const primary = infos[0] || {};
   const { text, num, symbol } = formatMoney(primary.total_balance, primary.currency);
-  const granted = formatMoney(primary.granted_balance, primary.currency);
-  const topped = formatMoney(primary.topped_up_balance, primary.currency);
   const threshold = Number(state.config.lowBalanceThreshold) || 10;
   const level = levelOf(num, threshold);
   const color = levelColor(level);
 
   $('balance-main').textContent = `${symbol}${text}`;
-  $('balance-main').style.color = color;
-
-  const parts = [];
-  if (infos.length > 1) parts.push(`${primary.currency || ''} ${symbol}${text}`);
-  if (primary.topped_up_balance !== undefined) parts.push(`充值 ${symbol}${topped.text}`);
-  if (primary.granted_balance !== undefined) parts.push(`赠送 ${symbol}${granted.text}`);
-  $('balance-breakdown').textContent = parts.join(' · ') || '暂无明细';
-
-  const pct = Math.min(num / 100, 1) * 100;
-  $('progress-fill').style.width = `${pct}%`;
-  $('progress-fill').style.background = color;
+  applyLevelColor($('balance-main'), color);
 
   // 迷你卡片
   $('mini-balance').textContent = `${symbol}${text}`;
-  $('mini-balance').style.color = color;
+  applyLevelColor($('mini-balance'), color);
   $('mini-status').textContent = state.balance?.is_available === false
     ? '账户不可用'
-    : level === 'low'
-      ? `低余额预警 ¥${threshold}`
-      : `更新于 ${state.lastFetchedAt}`;
+    : `更新于 ${state.lastFetchedAt}`;
 
   if (state.balance?.is_available === false) {
     setStatus('warn', '账户当前不可用');
   } else {
-    const statusText = level === 'low' ? `余额低于 ¥${threshold} 预警线` : '账户可用';
-    setStatus(level === 'ok' ? 'ok' : 'warn', statusText);
+    setStatus(level === 'ok' ? 'ok' : 'warn', `更新于 ${state.lastFetchedAt}`);
   }
 
   // 圆点
@@ -324,8 +319,7 @@ function setStatus(kind, text) {
   const dot = $('status-dot');
   dot.className = 'status-dot';
   if (kind !== 'idle') dot.classList.add(kind);
-  $('status-text').textContent = text;
-  $('updated-at').textContent = state.lastFetchedAt ? `更新于 ${state.lastFetchedAt}` : '';
+  $('updated-at').textContent = text;
 }
 
 /* ---------- 余额查询 ---------- */
@@ -429,12 +423,35 @@ async function testConnection() {
 
 function bindEvents() {
   $('btn-refresh').addEventListener('click', () => refresh(true));
-  $('btn-mini').addEventListener('click', () => window.ds.updateConfig({ mode: 'mini' }));
-  $('btn-collapse').addEventListener('click', () => window.ds.updateConfig({ mode: 'dot' }));
   $('btn-settings').addEventListener('click', openSettings);
   $('btn-mini-settings').addEventListener('click', openSettings);
   $('btn-back').addEventListener('click', () => hideSettings());
-  $('btn-expand').addEventListener('click', () => window.ds.updateConfig({ mode: 'card' }));
+
+  // 形态切换下拉菜单（大卡/迷你卡共用逻辑）
+  function closeModeMenus() {
+    document.querySelectorAll('.mode-menu').forEach((m) => m.classList.add('hidden'));
+  }
+  function toggleModeMenu(btn, menu) {
+    const willOpen = menu.classList.contains('hidden');
+    closeModeMenus();
+    if (willOpen) menu.classList.remove('hidden');
+  }
+  document.querySelectorAll('.mode-switch').forEach((wrap) => {
+    const btn = wrap.querySelector('.icon-btn');
+    const menu = wrap.querySelector('.mode-menu');
+    wrap.addEventListener('pointerdown', (e) => e.stopPropagation());
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleModeMenu(btn, menu);
+    });
+    menu.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const mode = e.target.closest('button')?.dataset.mode;
+      if (mode) window.ds.updateConfig({ mode });
+      closeModeMenus();
+    });
+  });
+  document.addEventListener('pointerdown', closeModeMenus);
   $('btn-save').addEventListener('click', saveSettings);
   $('btn-test').addEventListener('click', testConnection);
   $('btn-reset').addEventListener('click', async () => {

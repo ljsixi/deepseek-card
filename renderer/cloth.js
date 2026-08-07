@@ -458,26 +458,10 @@
       });
     }
 
-    // 余额 / 明细 / 状态文字
+    // 余额 / 更新时间
     drawText(isMini ? container.querySelector('.mini-balance') : container.querySelector('.balance-main'));
-    drawText(isMini ? container.querySelector('.mini-status') : container.querySelector('.balance-breakdown'));
-    if (!isMini) drawText(container.querySelector('.status-text'));
+    drawText(isMini ? container.querySelector('.mini-status') : container.querySelector('.updated-at'));
 
-    // 进度条
-    const track = container.querySelector('.progress-track');
-    const fill = container.querySelector('.progress-fill');
-    const tr = rel(track);
-    if (tr) {
-      ctx.fillStyle = getComputedStyle(track).backgroundColor || 'rgba(148,163,184,0.16)';
-      roundRect(ctx, tr.x, tr.y, tr.w, tr.h, tr.h / 2);
-      ctx.fill();
-      const fr = rel(fill);
-      if (fr && fr.w > 0) {
-        ctx.fillStyle = fill.style.background || getComputedStyle(fill).backgroundColor || '#34d399';
-        roundRect(ctx, fr.x, fr.y, fr.w, fr.h, fr.h / 2);
-        ctx.fill();
-      }
-    }
     return tex;
   }
 

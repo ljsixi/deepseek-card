@@ -208,6 +208,21 @@ function createWindow() {
             };
           })()`);
           console.log('[smoke-back]', JSON.stringify(stateAfterBack));
+          // 形态切换下拉菜单：点开 -> 选“小圆点” -> 确认切换 -> 切回大卡
+          const dropdownTest = await win.webContents.executeJavaScript(`(async () => {
+            document.getElementById('btn-mode').click();
+            await new Promise((r) => setTimeout(r, 150));
+            const menuOpen = !document.getElementById('mode-menu').classList.contains('hidden');
+            const option = document.querySelector('#mode-menu button[data-mode="dot"]');
+            option.click();
+            await new Promise((r) => setTimeout(r, 500));
+            const dotShown = !document.getElementById('dot').classList.contains('hidden');
+            await window.ds.updateConfig({ mode: 'card' });
+            await new Promise((r) => setTimeout(r, 400));
+            const cardShown = !document.getElementById('card').classList.contains('hidden');
+            return { menuOpen, optionText: option.textContent, dotShown, cardShown };
+          })()`);
+          console.log('[smoke-dropdown]', JSON.stringify(dropdownTest));
           // 截图贴图：验证 capturePage 保留透明背景，卡片内容可用作布料纹理
           const captureTest = await win.webContents.executeJavaScript(`(async () => {
             const src = await window.ds.capture({ x: 395, y: 395, width: 328, height: 220 });
