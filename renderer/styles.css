@@ -69,8 +69,8 @@ body {
 .card {
   /* 固定尺寸并置于窗口左上，拖拽时窗口向下扩展的空间留给布料垂挂 */
   position: absolute;
-  top: 14px;
-  left: 14px;
+  top: 395px;  /* 四周各留一个卡片对角线的透明空间给布料飘动 */
+  left: 395px;
   width: 328px;
   height: 220px;
   display: flex;

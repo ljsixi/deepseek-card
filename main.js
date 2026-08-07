@@ -12,9 +12,10 @@ const fs = require('fs');
 
 // 窗口比卡片大一圈，四周留 14px 透明边距：布料网格可完整覆盖卡片，
 // 甩动位移有足够余量，不会被窗口边缘裁切，也不会露出透明缝隙
-// 卡片固定在上部，窗口下方保留约 300px 透明空间给布料垂挂（透明区鼠标穿透）
-const CARD_W = 356;
-const CARD_H = 560;
+// 卡片四周各预留一个卡片对角线（约 395px）的透明空间，布料任意飘动都不会撞墙
+const CARD_DIAG = Math.round(Math.hypot(328, 220));
+const CARD_W = 328 + CARD_DIAG * 2;
+const CARD_H = 220 + CARD_DIAG * 2;
 const MINI_W = 216;
 const MINI_H = 88;
 const DOT_W = 74;
@@ -75,9 +76,10 @@ function saveConfig() {
 
 function defaultPosition() {
   const area = screen.getPrimaryDisplay().workArea;
+  // 卡片在窗口内的中心偏移：(CARD_DIAG+164, CARD_DIAG+110)，让卡片居中于桌面
   return {
-    x: area.x + area.width - CARD_W - 24,
-    y: area.y + area.height - CARD_H - 24,
+    x: Math.round(area.x + area.width / 2 - (CARD_DIAG + 164)),
+    y: Math.round(area.y + area.height / 2 - (CARD_DIAG + 110)),
   };
 }
 
@@ -98,7 +100,8 @@ function ensurePosOnScreen(pos) {
 }
 
 function createWindow() {
-  const pos = ensurePosOnScreen(config.pos) || defaultPosition();
+  // 每次启动都把卡片居中到桌面（旧保存位置按旧窗口尺寸记录，已不适用）
+  const pos = defaultPosition();
   const [w, h] = SIZES[config.mode] || SIZES.card;
   win = new BrowserWindow({
     width: w,
@@ -207,7 +210,7 @@ function createWindow() {
           console.log('[smoke-back]', JSON.stringify(stateAfterBack));
           // 截图贴图：验证 capturePage 保留透明背景，卡片内容可用作布料纹理
           const captureTest = await win.webContents.executeJavaScript(`(async () => {
-            const src = await window.ds.capture({ x: 14, y: 14, width: 328, height: 220 });
+            const src = await window.ds.capture({ x: 395, y: 395, width: 328, height: 220 });
             if (!src) return { ok: false };
             const img = new Image();
             await new Promise((resolve, reject) => {
@@ -680,17 +683,18 @@ function setWindowMode(mode) {
 
 let mouseIgnore = false;
 let dragActive = false;
+let mousePollTimer = null;
 
 // 各形态下卡片在窗口内的可交互区域（DIP）
 function interactiveRect(mode) {
   if (mode === 'mini') return { x: 14, y: 14, w: 188, h: 60 };
   if (mode === 'dot') return { x: 14, y: 14, w: 46, h: 46 };
-  return { x: 14, y: 14, w: 328, h: 220 };
+  return { x: CARD_DIAG, y: CARD_DIAG, w: 328, h: 220 };
 }
 
 // 主进程轮询光标：在卡片上时窗口接收事件，在透明区时穿透到桌面
 function pollMouseIgnore() {
-  if (!win || dragActive) return;
+  if (!win || win.isDestroyed() || dragActive) return;
   const p = screen.getCursorScreenPoint();
   const [wx, wy] = win.getPosition();
   const r = interactiveRect(config.mode || 'card');
@@ -935,7 +939,7 @@ if (!gotLock) {
     }
     registerIpc();
     createWindow();
-    setInterval(pollMouseIgnore, 60);
+    mousePollTimer = setInterval(pollMouseIgnore, 60);
     buildTray();
     if (config.autoLaunch) {
       // 同步系统真实的开机自启状态
@@ -948,6 +952,13 @@ if (!gotLock) {
 
   app.on('window-all-closed', () => {
     // 托盘驻留，不退出
+  });
+
+  app.on('will-quit', () => {
+    if (mousePollTimer) {
+      clearInterval(mousePollTimer);
+      mousePollTimer = null;
+    }
   });
 
   app.on('activate', () => {
