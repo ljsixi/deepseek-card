@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:;"
+  />
+  <title>DeepSeek 余额卡片</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-theme="dark">
+  <div id="app">
+    <div id="card" class="card hidden">
+      <div class="card-header">
+        <div class="brand">
+          <span class="brand-logo">DS</span>
+          <span class="brand-name">DeepSeek 余额</span>
+        </div>
+        <div class="header-actions">
+          <button id="btn-refresh" class="icon-btn" title="立即刷新">⟳</button>
+          <button id="btn-mini" class="icon-btn" title="迷你卡片">▢</button>
+          <button id="btn-collapse" class="icon-btn" title="折叠为小圆点">—</button>
+          <button id="btn-settings" class="icon-btn" title="设置">⚙</button>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="balance-row">
+          <div id="balance-main" class="balance-main">--</div>
+        </div>
+        <div id="balance-breakdown" class="balance-breakdown">等待配置 API Key</div>
+        <div class="progress-track">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <span id="status-dot" class="status-dot"></span>
+        <span id="status-text" class="status-text">等待查询</span>
+        <span id="updated-at" class="updated-at"></span>
+      </div>
+    </div>
+
+    <div id="settings" class="card settings hidden">
+      <div class="card-header">
+        <div class="brand">
+          <span class="brand-name">设置</span>
+        </div>
+        <div class="header-actions">
+          <button id="btn-back" class="icon-btn" title="返回">←</button>
+        </div>
+      </div>
+      <div class="settings-body">
+        <label class="field">
+          <span>API Key</span>
+          <div class="key-row">
+            <input id="set-api-key" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false" />
+            <button id="btn-toggle-key" class="mini-btn" type="button">显示</button>
+          </div>
+        </label>
+        <div class="row">
+          <button id="btn-test" class="mini-btn" type="button">测试连接</button>
+          <span id="test-result" class="test-result"></span>
+        </div>
+        <label class="field">
+          <span>刷新间隔</span>
+          <select id="set-interval">
+            <option value="10000">10 秒</option>
+            <option value="30000">30 秒</option>
+            <option value="60000">1 分钟</option>
+            <option value="300000">5 分钟</option>
+            <option value="900000">15 分钟</option>
+            <option value="1800000">30 分钟</option>
+            <option value="3600000">1 小时</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>低余额阈值（¥）</span>
+          <input id="set-threshold" type="number" min="0" step="1" />
+        </label>
+        <label class="field">
+          <span>主题</span>
+          <select id="set-theme">
+            <option value="dark">深色</option>
+            <option value="light">浅色</option>
+          </select>
+        </label>
+        <div class="row">
+          <label class="check"><input id="set-ontop" type="checkbox" /> 窗口置顶</label>
+          <label class="check"><input id="set-autostart" type="checkbox" /> 开机自启</label>
+        </div>
+        <div class="row actions">
+          <button id="btn-save" class="primary-btn" type="button">保存</button>
+          <button id="btn-reset" class="ghost-btn" type="button">清除 Key</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="dot" class="dot hidden">
+      <span id="dot-balance" class="dot-balance">¥</span>
+    </div>
+
+    <div id="mini" class="mini hidden">
+      <div class="mini-main">
+        <div id="mini-balance" class="mini-balance">--</div>
+        <div id="mini-status" class="mini-status">未配置 API Key</div>
+      </div>
+      <div class="mini-actions">
+        <button id="btn-mini-settings" class="icon-btn" title="设置">⚙</button>
+        <button id="btn-expand" class="icon-btn" title="展开完整卡片">⤢</button>
+      </div>
+    </div>
+    <canvas id="cloth-canvas" aria-hidden="true"></canvas>
+  </div>
+  <script src="cloth.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

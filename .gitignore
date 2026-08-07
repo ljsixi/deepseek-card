@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+config.json
+/screenshot-*.png
+/assets/screenshot-cloth.png
+/assets/screenshot-dot.png
+/assets/screenshot-mini.png
+/assets/screenshot-settings.png

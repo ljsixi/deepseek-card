@@ -1,0 +1,15 @@
+{
+  "name": "deepseek-balance-card",
+  "version": "1.0.0",
+  "description": "可放桌面上的 DeepSeek API 余额小卡片",
+  "main": "main.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "icon": "node scripts/gen-icon.js"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0"
+  }
+}
