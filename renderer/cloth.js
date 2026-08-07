@@ -15,6 +15,27 @@
   const DRAG_INERTIA = 0.45; // 拖动加速度 -> 惯性反推力系数
   const SPEED_FLUTTER = 0.20; // 拖动速度对风力的增益（速度越快越飘）
   const Z_MAX = 10;           // 褶皱深度上限（配合边界软墙，防止投影超出窗口）
+
+  // 平滑值噪声：随时间和空间变化的褶皱场，让褶皱在任意位置/方向出现
+  function hash(ix, iy, t) {
+    const s = Math.sin(ix * 127.1 + iy * 311.7 + t * 74.7) * 43758.5453;
+    return s - Math.floor(s);
+  }
+  function noise(x, y, t) {
+    const sx = x * 0.028;
+    const sy = y * 0.030;
+    const gx = Math.floor(sx);
+    const gy = Math.floor(sy);
+    const fx = sx - gx;
+    const fy = sy - gy;
+    const u = fx * fx * (3 - 2 * fx);
+    const v = fy * fy * (3 - 2 * fy);
+    const a = hash(gx, gy, t);
+    const b = hash(gx + 1, gy, t);
+    const c = hash(gx, gy + 1, t);
+    const d = hash(gx + 1, gy + 1, t);
+    return (a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v) * 2 - 1;
+  }
   // 窗口四周已有 14px 透明边距，布料网格直接完整覆盖卡片，不内缩
   const MARGIN = 0;
 
@@ -78,6 +99,7 @@
       this.wallR = opts && opts.wallR !== undefined ? opts.wallR : w + 11;
       this.wallT = opts && opts.wallT !== undefined ? opts.wallT : -12;
       this.wallB = opts && opts.wallB !== undefined ? opts.wallB : h + 12;
+      this.grabPin = -1;
       this.margin = MARGIN;
       this.cols = COLS;
       this.rows = ROWS;
@@ -88,6 +110,7 @@
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
           this.pts.push({
+            idx: r * COLS + c,
             x: c * spX,
             y: r * spY,
             z: 0,
@@ -97,6 +120,21 @@
             pinned: r === 0, // 顶部固定：像窗帘挂在杆上
           });
         }
+      }
+      // 抓取点：找到离手指最近的质点作为“手捏住”的锚点，动效随抓取位置变化
+      if (opts && opts.grab && Number.isFinite(opts.grab.x) && Number.isFinite(opts.grab.y)) {
+        let best = -1;
+        let bestD = Infinity;
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const d = (c * spX - opts.grab.x) ** 2 + (r * spY - opts.grab.y) ** 2;
+            if (d < bestD) {
+              bestD = d;
+              best = r * COLS + c;
+            }
+          }
+        }
+        this.grabPin = best;
       }
       this.constraints = [];
       const add = (a, b, rest) => this.constraints.push({ a, b, rest });
@@ -127,7 +165,7 @@
       dragAY *= DRAG_DECAY;
       const h = this.h;
       for (const p of this.pts) {
-        if (p.pinned) {
+        if (p.pinned || p.idx === this.grabPin) {
           p.px = p.x; p.py = p.y; p.pz = p.z;
           continue;
         }
@@ -137,13 +175,12 @@
         p.px = p.x; p.py = p.y; p.pz = p.z;
         p.x += vx + windX * WIND_X + inertiaX;
         p.y += vy + GRAVITY + inertiaY;
-        // 窗帘式褶皱：以竖向褶子为主，越靠下摆越明显；轻微横向起伏作为辅波
+        // 褶皱：平滑噪声场随空间/时间演化，褶皱在任意位置出现；
+        // 越靠下摆越明显；左右边缘轻微衰减，避免自由角被吹卷
         const depth = 0.25 + 0.75 * Math.min(1, p.y / h);
-        const ridge = Math.sin(p.x * 0.075 + t * 0.0021);
-        const swell = 0.8 + 0.2 * Math.sin(p.y * 0.04 + t * 0.0011);
-        // 边缘衰减：左右边缘的褶皱减弱，避免自由角被吹卷成折叠状态
-        const edge = Math.min(1, p.x / (this.w * 0.10), (this.w - p.x) / (this.w * 0.10));
-        p.z += vz + windX * WIND_Z * depth * ridge * swell * edge;
+        const edge = Math.min(1, p.x / (this.w * 0.06), (this.w - p.x) / (this.w * 0.06));
+        const n = noise(p.x, p.y, t * 0.0005);
+        p.z += vz + windX * WIND_Z * depth * n * edge;
         p.z *= Z_DAMP; // 轻微回弹，避免越吹越远
       }
       // 约束求解
@@ -151,7 +188,9 @@
         for (const c of this.constraints) {
           const a = this.pts[c.a];
           const b = this.pts[c.b];
-          if (a.pinned && b.pinned) continue;
+          const aPin = a.pinned || a.idx === this.grabPin;
+          const bPin = b.pinned || b.idx === this.grabPin;
+          if (aPin && bPin) continue;
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const dz = b.z - a.z;
@@ -161,12 +200,13 @@
           const ox = dx * diff;
           const oy = dy * diff;
           const oz = dz * diff;
-          if (!a.pinned) { a.x += ox; a.y += oy; a.z += oz; }
-          if (!b.pinned) { b.x -= ox; b.y -= oy; b.z -= oz; }
+          if (!aPin) { a.x += ox; a.y += oy; a.z += oz; }
+          if (!bPin) { b.x -= ox; b.y -= oy; b.z -= oz; }
         }
       }
       // 边界弹性墙：触墙后缓慢推回而非硬性截断，避免"空气墙"的生硬感
       for (const p of this.pts) {
+        if (p.pinned || p.idx === this.grabPin) continue;
         if (p.x < this.wallL) p.x = this.wallL + (this.wallL - p.x) * 0.45;
         else if (p.x > this.wallR) p.x = this.wallR - (p.x - this.wallR) * 0.45;
         if (p.y < this.wallT) p.y = this.wallT + (this.wallT - p.y) * 0.45;
@@ -393,7 +433,7 @@
     });
   }
 
-  async function start(container, imageSrc) {
+  async function start(container, imageSrc, grab) {
     stop();
     canvas = document.getElementById('cloth-canvas');
     if (!canvas || !container) return;
@@ -446,6 +486,7 @@
       wallR: w + marginR - 4,
       wallT: -marginT + 3,
       wallB: h + marginB - 3,
+      grab,
     });
     frames = 0;
     firstBadFrame = -1;

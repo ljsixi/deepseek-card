@@ -236,6 +236,7 @@ function makeDraggable(el, { skip, onClick, cloth = false } = {}) {
     if (cloth) {
       (async () => {
         let src = null;
+        let grab = null;
         try {
           const r = el.getBoundingClientRect();
           if (window.ds && window.ds.capture) {
@@ -246,6 +247,8 @@ function makeDraggable(el, { skip, onClick, cloth = false } = {}) {
               height: Math.round(r.height),
             });
           }
+          // 抓取点在卡片内的位置：作为布料“手捏住”的锚点，动效随抓取位置变化
+          grab = { x: e.clientX - r.left, y: e.clientY - r.top };
         } catch (err) {
           src = null;
         }
@@ -254,7 +257,7 @@ function makeDraggable(el, { skip, onClick, cloth = false } = {}) {
           if (window.ClothFX) window.ClothFX.stop();
           return;
         }
-        if (window.ClothFX) await window.ClothFX.start(el, src);
+        if (window.ClothFX) await window.ClothFX.start(el, src, grab);
         if (drag) el.classList.add('cloth-active');
       })();
     }
