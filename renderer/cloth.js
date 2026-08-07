@@ -15,6 +15,10 @@
   const DRAG_INERTIA = 0.45; // 拖动加速度 -> 惯性反推力系数
   const SPEED_FLUTTER = 0.20; // 拖动速度对风力的增益（速度越快越飘）
   const Z_MAX = 10;           // 褶皱深度上限（配合边界软墙，防止投影超出窗口）
+  const PINCH_Z = 5;          // 抓取点向观察者隆起的 z 高度（3D 捏起效果）
+  const PINCH_R = 72;         // 捏起影响的半径
+  const PINCH_PULL = 0.035;   // 周围布料向抓取点收拢的力度
+  const PINCH_LIFT = 0.05;    // 周围布料向观察者微隆的力度
 
   // 平滑值噪声：随时间和空间变化的褶皱场，让褶皱在任意位置/方向出现
   function hash(ix, iy, t) {
@@ -100,6 +104,11 @@
       this.wallT = opts && opts.wallT !== undefined ? opts.wallT : -12;
       this.wallB = opts && opts.wallB !== undefined ? opts.wallB : h + 12;
       this.grabPin = -1;
+      this.grabX = opts && opts.grab ? opts.grab.x : -1;
+      this.grabY = opts && opts.grab ? opts.grab.y : -1;
+      // 捏起半径/高度随卡片尺寸缩放，避免迷你卡片被捏得过大
+      this.grabR = Math.min(PINCH_R, Math.min(w, h) * 0.5);
+      this.pinchZ = Math.min(PINCH_Z, Math.min(w, h) * 0.08);
       this.margin = MARGIN;
       this.cols = COLS;
       this.rows = ROWS;
@@ -166,6 +175,8 @@
       const h = this.h;
       for (const p of this.pts) {
         if (p.pinned || p.idx === this.grabPin) {
+          // 抓取点本身向观察者隆起，形成被手指捏起的 3D 形态
+          if (p.idx === this.grabPin) p.z = this.pinchZ;
           p.px = p.x; p.py = p.y; p.pz = p.z;
           continue;
         }
@@ -182,6 +193,18 @@
         const n = noise(p.x, p.y, t * 0.0005);
         p.z += vz + windX * WIND_Z * depth * n * edge;
         p.z *= Z_DAMP; // 轻微回弹，避免越吹越远
+        // 捏起效果：抓取点周围的布料向手指聚拢并微隆，形成放射状收拢
+        if (this.grabPin >= 0) {
+          const dx = p.x - this.grabX;
+          const dy = p.y - this.grabY;
+          const d = Math.hypot(dx, dy);
+          if (d < this.grabR && d > 1) {
+            const fall = (1 - d / this.grabR) ** 2;
+            p.x -= (dx / d) * PINCH_PULL * fall;
+            p.y -= (dy / d) * PINCH_PULL * fall;
+            p.z += PINCH_LIFT * fall;
+          }
+        }
       }
       // 约束求解
       for (let i = 0; i < ITERATIONS; i++) {
