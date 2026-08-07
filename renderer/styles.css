@@ -575,6 +575,12 @@ select:focus {
   pointer-events: none;
   display: none;
   will-change: transform;
+  transition: opacity 0.3s ease;
+}
+
+/* 松手收尾：布料淡出 */
+#cloth-canvas.fading {
+  opacity: 0;
 }
 
 /* 布料运算中，原 DOM 卡片隐藏（保留布局和指针命中） */

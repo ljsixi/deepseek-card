@@ -257,7 +257,8 @@ function makeDraggable(el, { skip, onClick, cloth = false } = {}) {
           if (window.ClothFX) window.ClothFX.stop();
           return;
         }
-        if (window.ClothFX) await window.ClothFX.start(el, src, grab);
+        const clothOpts = { crease: !!(state.config && state.config.creaseShadow) };
+        if (window.ClothFX) await window.ClothFX.start(el, src, grab, clothOpts);
         if (drag) el.classList.add('cloth-active');
       })();
     }
@@ -299,8 +300,8 @@ function makeDraggable(el, { skip, onClick, cloth = false } = {}) {
     drag = null;
     el.classList.remove('dragging');
     if (cloth) {
-      if (window.ClothFX) window.ClothFX.stop();
-      if (window.ClothFX) window.ClothFX.setDrag(0, 0, 0, 0);
+      // 松手：布料淡出收尾，与卡片淡入交叉过渡
+      if (window.ClothFX) window.ClothFX.release();
       el.classList.remove('cloth-active');
       el.classList.add('settle');
       setTimeout(() => el.classList.remove('settle'), 340);
@@ -371,6 +372,7 @@ function fillSettings() {
   $('set-theme').value = cfg.theme === 'light' ? 'light' : 'dark';
   $('set-ontop').checked = !!cfg.alwaysOnTop;
   $('set-autostart').checked = !!cfg.autoLaunch;
+  $('set-crease').checked = !!cfg.creaseShadow;
   $('test-result').textContent = '';
 }
 
@@ -383,6 +385,7 @@ async function saveSettings() {
     theme: $('set-theme').value,
     alwaysOnTop: $('set-ontop').checked,
     autoLaunch: $('set-autostart').checked,
+    creaseShadow: $('set-crease').checked,
   };
   const keyChanged = patch.apiKey !== state.config.apiKey;
   state.config = await window.ds.updateConfig(patch);

@@ -33,6 +33,7 @@ const DEFAULT_CONFIG = {
   theme: 'dark',
   alwaysOnTop: true,
   autoLaunch: false,
+  creaseShadow: false,            // 褶皱折痕阴影（z 落差明暗），默认关闭
   mode: 'card',                   // card | mini | dot
   pos: null,                      // { x, y }
 };
@@ -166,6 +167,7 @@ function createWindow() {
               themeValue: $('set-theme') ? $('set-theme').value : null,
               ontopChecked: $('set-ontop') ? $('set-ontop').checked : null,
               autostartChecked: $('set-autostart') ? $('set-autostart').checked : null,
+              creaseChecked: $('set-crease') ? $('set-crease').checked : null,
               contrast: {
                 select: styleOf(sel),
                 option: opt ? { ...styleOf(opt), text: opt.text } : null,

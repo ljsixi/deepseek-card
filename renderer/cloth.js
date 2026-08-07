@@ -15,10 +15,10 @@
   const DRAG_INERTIA = 0.45; // 拖动加速度 -> 惯性反推力系数
   const SPEED_FLUTTER = 0.20; // 拖动速度对风力的增益（速度越快越飘）
   const Z_MAX = 10;           // 褶皱深度上限（配合边界软墙，防止投影超出窗口）
-  const PINCH_Z = 5;          // 抓取点向观察者隆起的 z 高度（3D 捏起效果）
-  const PINCH_R = 72;         // 捏起影响的半径
-  const PINCH_PULL = 0.035;   // 周围布料向抓取点收拢的力度
-  const PINCH_LIFT = 0.05;    // 周围布料向观察者微隆的力度
+  const PINCH_Z = 8;          // 抓取点向观察者隆起的 z 高度（3D 捏起效果）
+  const PINCH_R = 90;         // 捏起影响的半径
+  const PINCH_PULL = 0.13;    // 周围布料向抓取点收拢的力度
+  const PINCH_LIFT = 0.12;    // 周围布料向观察者微隆的力度
 
   // 平滑值噪声：随时间和空间变化的褶皱场，让褶皱在任意位置/方向出现
   function hash(ix, iy, t) {
@@ -39,6 +39,10 @@
     const c = hash(gx, gy + 1, t);
     const d = hash(gx + 1, gy + 1, t);
     return (a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v) * 2 - 1;
+  }
+  // 双倍频噪声：褶皱纹理更丰富、不规则
+  function turbulence(x, y, t) {
+    return (noise(x, y, t) + 0.55 * noise(x * 2.1 + 23.7, y * 2.3 + 7.1, t * 1.3)) / 1.55;
   }
   // 窗口四周已有 14px 透明边距，布料网格直接完整覆盖卡片，不内缩
   const MARGIN = 0;
@@ -126,7 +130,7 @@
             px: c * spX,
             py: r * spY,
             pz: 0,
-            pinned: r === 0, // 顶部固定：像窗帘挂在杆上
+            pinned: false, // 唯一固定点 = 手指抓取点
           });
         }
       }
@@ -163,7 +167,8 @@
       // 阵风：水平摆动 + 沿布面纵横两个方向的起伏；拖动越快，风越强
       const speed = Math.hypot(dragVX, dragVY);
       const flutter = 1 + Math.min(0.5, speed * SPEED_FLUTTER);
-      const gust = 1 + 0.3 * Math.sin(t * 0.0009);
+      // 噪声驱动阵风：风势忽强忽弱，像真实气流一样不规律
+      const gust = 0.7 + 0.65 * noise(3.7, 9.2, t * 0.00022);
       const windX = (Math.sin(t * 0.0024) * 2.1 + Math.sin(t * 0.0012) * 1.0) * gust * flutter;
       // 惯性耦合：拖动加速时布料滞后、减速/停止时前甩，方向与加速度相反
       const inertiaX = -dragAX * DRAG_INERTIA * 16.7;
@@ -187,21 +192,25 @@
         p.x += vx + windX * WIND_X + inertiaX;
         p.y += vy + GRAVITY + inertiaY;
         // 褶皱：平滑噪声场随空间/时间演化，褶皱在任意位置出现；
-        // 越靠下摆越明显；左右边缘轻微衰减，避免自由角被吹卷
-        const depth = 0.25 + 0.75 * Math.min(1, p.y / h);
+        // 幅度按"离手指抓取点越远越明显"计算
+        const dPin = this.grabPin >= 0
+          ? Math.hypot(p.x - this.grabX, p.y - this.grabY)
+          : p.y;
+        const depth = 0.15 + 0.85 * Math.min(1, dPin / (h * 0.55));
         const edge = Math.min(1, p.x / (this.w * 0.06), (this.w - p.x) / (this.w * 0.06));
-        const n = noise(p.x, p.y, t * 0.0005);
+        const n = turbulence(p.x, p.y, t * 0.00022);
         p.z += vz + windX * WIND_Z * depth * n * edge;
         p.z *= Z_DAMP; // 轻微回弹，避免越吹越远
-        // 捏起效果：抓取点周围的布料向手指聚拢并微隆，形成放射状收拢
+        // 抓取效果：布料向手指聚拢并微隆；收拢带噪声扰动，形成不规则放射褶皱
         if (this.grabPin >= 0) {
           const dx = p.x - this.grabX;
           const dy = p.y - this.grabY;
           const d = Math.hypot(dx, dy);
           if (d < this.grabR && d > 1) {
             const fall = (1 - d / this.grabR) ** 2;
-            p.x -= (dx / d) * PINCH_PULL * fall;
-            p.y -= (dy / d) * PINCH_PULL * fall;
+            const jit = 0.4 + 0.9 * (0.5 + 0.5 * noise(p.x * 0.4, p.y * 0.4, t * 0.00018));
+            p.x -= (dx / d) * PINCH_PULL * fall * jit;
+            p.y -= (dy / d) * PINCH_PULL * fall * jit;
             p.z += PINCH_LIFT * fall;
           }
         }
@@ -230,10 +239,21 @@
       // 边界弹性墙：触墙后缓慢推回而非硬性截断，避免"空气墙"的生硬感
       for (const p of this.pts) {
         if (p.pinned || p.idx === this.grabPin) continue;
-        if (p.x < this.wallL) p.x = this.wallL + (this.wallL - p.x) * 0.45;
-        else if (p.x > this.wallR) p.x = this.wallR - (p.x - this.wallR) * 0.45;
-        if (p.y < this.wallT) p.y = this.wallT + (this.wallT - p.y) * 0.45;
-        else if (p.y > this.wallB) p.y = this.wallB - (p.y - this.wallB) * 0.45;
+        // 推回的同时消耗法向速度（非弹性碰撞），贴墙时不会抖动
+        if (p.x < this.wallL) {
+          p.x = this.wallL + (this.wallL - p.x) * 0.45;
+          p.px = p.x - (p.x - p.px) * 0.35;
+        } else if (p.x > this.wallR) {
+          p.x = this.wallR - (p.x - this.wallR) * 0.45;
+          p.px = p.x - (p.x - p.px) * 0.35;
+        }
+        if (p.y < this.wallT) {
+          p.y = this.wallT + (this.wallT - p.y) * 0.45;
+          p.py = p.y - (p.y - p.py) * 0.35;
+        } else if (p.y > this.wallB) {
+          p.y = this.wallB - (p.y - this.wallB) * 0.45;
+          p.py = p.y - (p.y - p.py) * 0.35;
+        }
         if (p.z > Z_MAX) p.z = Z_MAX;
         else if (p.z < -Z_MAX) p.z = -Z_MAX;
       }
@@ -269,7 +289,43 @@
           const dot = (nx * light.x + ny * light.y + nz * light.z) / nl;
           // 明暗调淡：只在褶皱高反差处有可见阴影，避免整张卡片被压暗成"纱"
           const bright = 0.70 + 0.30 * Math.max(0, dot);
-          const shade = Math.min(0.35, (1 - bright) * 0.75);
+          let shade = Math.min(0.35, (1 - bright) * 0.75);
+          const cx = ((c + 0.5) / (COLS - 1)) * w;
+          const cy = ((r + 0.5) / (ROWS - 1)) * h;
+          // 折痕阴影（设置开关）：z 落差越大越暗，噪声扰动避免过于规律
+          if (creaseEnabled) {
+            const crease = Math.min(0.45, (Math.abs(p10.z - p00.z) + Math.abs(p01.z - p00.z)) * 0.05) *
+              (0.55 + 0.45 * noise(cx * 0.55, cy * 0.55, 3.3));
+            shade = Math.min(0.60, shade + crease);
+          }
+          // 抓取点：不规则的手指阴影 + 放射收拢褶皱，呈现"被抓"的感觉
+          if (this.grabPin >= 0) {
+            const dxc = cx - this.grabX;
+            const dyc = cy - this.grabY;
+            const dc = Math.hypot(dxc, dyc);
+            const R = this.grabR;
+            if (dc < R) {
+              // 手指阴影：抓取点附近不规则暗块
+              if (dc < 14) {
+                const blob = (1 - dc / 14) * (0.30 + 0.35 * noise(cx, cy, 5.1));
+                shade = Math.min(0.62, shade + blob);
+              }
+              // 放射收拢褶皱：6 条角度抖动、强度不一的暗褶，越靠手指越深
+              if (dc > 6) {
+                const ang = Math.atan2(dyc, dxc);
+                for (let k = 0; k < 6; k++) {
+                  const dir = (k / 6) * Math.PI * 2 + (noise(k, 0.5, 7.3) - 0.5) * 1.1;
+                  let da = Math.abs(ang - dir);
+                  da = Math.min(da, Math.PI * 2 - da);
+                  if (da < 0.22) {
+                    const fold = (1 - da / 0.22) * (1 - dc / R) *
+                      (0.20 + 0.22 * noise(cx * 0.7, cy * 0.7, 9.7));
+                    shade = Math.min(0.62, shade + fold);
+                  }
+                }
+              }
+            }
+          }
 
           const tx = (c / (COLS - 1)) * tex.width;
           const ty = (r / (ROWS - 1)) * tex.height;
@@ -428,6 +484,8 @@
   let dragAY = 0;
   let offsetX = 0;
   let offsetY = 0;
+  let settleTimer = null;
+  let creaseEnabled = false;
 
   const light = (() => {
     // 正面为主的柔光，避免左上光照让左右两侧明暗明显不对称
@@ -456,7 +514,7 @@
     });
   }
 
-  async function start(container, imageSrc, grab) {
+  async function start(container, imageSrc, grab, opts) {
     stop();
     canvas = document.getElementById('cloth-canvas');
     if (!canvas || !container) return;
@@ -476,6 +534,7 @@
     canvas.style.left = '0px';
     canvas.style.top = '0px';
     canvas.style.display = 'block';
+    creaseEnabled = !!(opts && opts.crease);
     ctx2d = canvas.getContext('2d');
     if (!shadeCanvas) {
       shadeCanvas = document.createElement('canvas');
@@ -504,12 +563,16 @@
     const marginR = winW - rect.right;
     const marginT = rect.top;
     const marginB = winH - rect.bottom;
+    // 固定点 = 手指抓取点；异常情况下兜底到卡片中心
+    const grabPoint = grab && Number.isFinite(grab.x) && Number.isFinite(grab.y)
+      ? grab
+      : { x: w / 2, y: h / 2 };
     cloth = new Cloth(w, h, {
       wallL: -marginL + 4,   // 预留 z 投影 + 三角形外扩余量，杜绝边缘被裁
       wallR: w + marginR - 4,
       wallT: -marginT + 3,
       wallB: h + marginB - 3,
-      grab,
+      grab: grabPoint,
     });
     frames = 0;
     firstBadFrame = -1;
@@ -517,6 +580,8 @@
   }
 
   function stop() {
+    clearTimeout(settleTimer);
+    settleTimer = null;
     if (raf) cancelAnimationFrame(raf);
     raf = null;
     cloth = null;
@@ -525,7 +590,19 @@
       const c = canvas.getContext('2d');
       c && c.clearRect(0, 0, canvas.width, canvas.height);
       canvas.style.display = 'none';
+      canvas.classList.remove('fading');
     }
+  }
+
+  // 松手：布料继续飘一小段并淡出，与 DOM 卡片的淡入交叉过渡，不再生硬切换
+  function release() {
+    setDrag(0, 0, 0, 0);
+    clearTimeout(settleTimer);
+    if (canvas) canvas.classList.add('fading');
+    settleTimer = setTimeout(() => {
+      settleTimer = null;
+      stop();
+    }, 320);
   }
 
   // 拖动耦合：接收方向/速度（px/ms）与加速度（px/ms²），平滑后作用于布面
@@ -539,6 +616,7 @@
   window.ClothFX = {
     start,
     stop,
+    release,
     setDrag,
     isActive: () => !!cloth,
     // 调试：输出质点网格的位移范围，用于验证褶皱幅度和边缘余量
