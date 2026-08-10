@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="340" viewBox="0 0 1200 340"
+     role="img" aria-labelledby="title desc">
+  <title id="title">DeepSeek 余额卡片</title>
+  <desc id="desc">一块放在桌面上的 DeepSeek API 余额卡片，抓取时像布料一样飘动。</desc>
+
+  <defs>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#17233b"/>
+      <stop offset="1" stop-color="#101a2e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1d4ed8"/>
+      <stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="340" rx="26" fill="#0b1220"/>
+
+  <!-- 淡淡的布料网格底纹 -->
+  <g stroke="#ffffff" stroke-opacity="0.03" stroke-width="1">
+    <path d="M 0 85 L 1200 85"/>
+    <path d="M 0 170 L 1200 170"/>
+    <path d="M 0 255 L 1200 255"/>
+    <path d="M 300 0 L 300 340"/>
+    <path d="M 600 0 L 600 340"/>
+    <path d="M 900 0 L 900 340"/>
+  </g>
+
+  <!-- 标题区 -->
+  <g id="title-block" transform="translate(64 44)">
+    <text x="0" y="34" font-family="ui-monospace, 'SFMono-Regular', Menlo, monospace"
+          font-size="20" letter-spacing="5" fill="#7dd3fc">DESKTOP BALANCE WIDGET</text>
+    <text x="0" y="102" font-family="'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="58" font-weight="800" fill="#f1f5f9">DeepSeek 余额卡片</text>
+    <text x="0" y="146" font-family="'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="23" fill="#94a3b8">把余额放在桌面上，抓起来像布料一样飘动</text>
+
+    <g id="badges" transform="translate(0 192)">
+      <rect x="0" y="0" width="152" height="42" rx="14" fill="#16233d" stroke="#2d3f63"/>
+      <text x="76" y="27" text-anchor="middle" font-family="'Segoe UI', 'PingFang SC', sans-serif"
+            font-size="19" fill="#e2e8f0">Windows 10/11</text>
+      <rect x="166" y="0" width="138" height="42" rx="14" fill="#16233d" stroke="#2d3f63"/>
+      <text x="235" y="27" text-anchor="middle" font-family="'Segoe UI', 'PingFang SC', sans-serif"
+            font-size="19" fill="#e2e8f0">Electron</text>
+      <rect x="318" y="0" width="180" height="42" rx="14" fill="#16233d" stroke="#2d3f63"/>
+      <text x="408" y="27" text-anchor="middle" font-family="'Segoe UI', 'PingFang SC', sans-serif"
+            font-size="19" fill="#e2e8f0">DeepSeek API</text>
+    </g>
+  </g>
+
+  <!-- 布料卡片插画 -->
+  <g id="cloth-proof" transform="translate(700 52)">
+    <!-- 被抓起的布料：从卡片左上角向右上方飘出的褶皱 -->
+    <g fill="none" stroke="#4d7cfe" stroke-opacity="0.55" stroke-width="2.5" stroke-linecap="round">
+      <path d="M 24 22 C 58 -18, 104 -38, 148 -52"/>
+      <path d="M 44 34 C 78 -2, 122 -20, 164 -32"/>
+      <path d="M 8 48 C 36 16, 78 -6, 118 -20"/>
+      <path d="M 30 62 C 60 32, 96 12, 132 0"/>
+    </g>
+    <!-- 布料三角网格片段 -->
+    <g fill="none" stroke="#7dd3fc" stroke-opacity="0.35" stroke-width="1.5">
+      <path d="M 96 -18 L 128 -40 L 158 -26 Z"/>
+      <path d="M 128 -40 L 166 -52 L 158 -26 Z"/>
+      <path d="M 96 -18 L 126 -4 L 158 -26 Z"/>
+    </g>
+    <!-- 抓取点圆点 -->
+    <circle cx="24" cy="22" r="7" fill="#7dd3fc"/>
+
+    <!-- 卡片本体 -->
+    <g>
+      <rect x="0" y="0" width="380" height="190" rx="18" fill="url(#cardBg)" stroke="#3b5bdb" stroke-width="2"/>
+      <rect x="0" y="0" width="380" height="44" rx="18" fill="url(#accent)" fill-opacity="0.16"/>
+      <rect x="0" y="22" width="380" height="22" fill="#12203a"/>
+      <circle cx="26" cy="22" r="10" fill="url(#accent)"/>
+      <text x="43" y="28" font-family="'Segoe UI', 'PingFang SC', sans-serif" font-size="18" font-weight="700" fill="#ffffff">DS</text>
+      <text x="186" y="30" text-anchor="middle" font-family="'Segoe UI', 'PingFang SC', sans-serif" font-size="18" font-weight="600" fill="#cbd5e1">DeepSeek 余额</text>
+
+      <text x="190" y="112" text-anchor="middle" font-family="'Segoe UI', 'PingFang SC', sans-serif" font-size="52" font-weight="800" fill="#34d399">¥ 88.50</text>
+      <text x="190" y="150" text-anchor="middle" font-family="'Segoe UI', 'PingFang SC', sans-serif" font-size="18" fill="#64748b">更新于 14:32:08 · 状态正常</text>
+    </g>
+  </g>
+</svg>

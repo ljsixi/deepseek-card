@@ -9,9 +9,52 @@ const state = {
   lowNotified: false,
   timer: null,
   lastTotal: null,
+  settingsPrevMode: null, // 打开设置前的形态，返回时恢复
 };
 
+// 设置页可调的布料动效参数（key 与配置字段一致，标签通过 HTML 中的 em 实时显示）
+const CLOTH_FIELDS = [
+  ['clothWind'],
+  ['clothFold'],
+  ['clothGravity'],
+  ['clothAirDrag'],
+  ['clothDamping'],
+  ['clothDragLag'],
+  ['clothInertia'],
+  ['clothZMax'],
+  ['clothPinchPull'],
+  ['clothPinchLift'],
+  ['clothPinchZ'],
+  ['clothDensity'],
+];
+
 /* ---------- 工具 ---------- */
+
+function num(v, d) {
+  if (v === undefined || v === null || v === '') return d;
+  const n = Number(v);
+  return Number.isNaN(n) ? d : n;
+}
+
+// 配置字段 -> 布料物理参数（密度同时映射行列）
+function clothParamsFromConfig(cfg) {
+  const density = Math.max(8, Math.round(num(cfg.clothDensity, 36)));
+  return {
+    cols: density,
+    rows: Math.max(8, Math.round((density * 26) / 36)),
+    damping: num(cfg.clothDamping, 0.985),
+    gravity: num(cfg.clothGravity, 0.07),
+    airDrag: num(cfg.clothAirDrag, 0.004),
+    dragLag: num(cfg.clothDragLag, 0.02),
+    wind: num(cfg.clothWind, 1),
+    fold: num(cfg.clothFold, 0.03),
+    zMax: num(cfg.clothZMax, 10),
+    pinchPull: num(cfg.clothPinchPull, 0.13),
+    pinchLift: num(cfg.clothPinchLift, 0.12),
+    pinchZ: num(cfg.clothPinchZ, 8),
+    inertia: num(cfg.clothInertia, 0.45),
+  };
+}
 
 function formatMoney(value, currency) {
   const num = Number.parseFloat(value) || 0;
@@ -76,10 +119,19 @@ function showSettingsView() {
 function hideSettings() {
   settingsOpen = false;
   $('settings').classList.add('hidden');
+  const prev = state.settingsPrevMode || 'card';
+  state.settingsPrevMode = null;
+  if (prev !== state.config.mode) {
+    // 先同步恢复界面形态，再异步持久化并让主进程把窗口切回原尺寸
+    state.config = { ...state.config, mode: prev };
+    window.ds.updateConfig({ mode: prev });
+  }
   applyMode(state.config.mode);
 }
 
 async function openSettings() {
+  // 记住进入设置前的形态；设置页需要完整卡片尺寸，临时切到大卡，返回时恢复
+  state.settingsPrevMode = state.config.mode || 'card';
   if (state.config.mode !== 'card') {
     state.config = await window.ds.updateConfig({ mode: 'card' });
   }
@@ -258,6 +310,7 @@ function makeDraggable(el, { skip, onClick, cloth = false } = {}) {
         const clothOpts = {
           crease: !!(state.config && state.config.creaseShadow),
           wind: !(state.config && state.config.windEnabled === false),
+          params: clothParamsFromConfig(state.config || {}),
         };
         if (window.ClothFX) await window.ClothFX.start(el, src, grab, clothOpts);
         if (drag) el.classList.add('cloth-active');
@@ -303,11 +356,11 @@ function makeDraggable(el, { skip, onClick, cloth = false } = {}) {
     drag = null;
     el.classList.remove('dragging');
     if (cloth) {
-      // 松手：布料淡出收尾，与卡片淡入交叉过渡
-      if (window.ClothFX) window.ClothFX.release();
-      el.classList.remove('cloth-active');
-      el.classList.add('settle');
-      setTimeout(() => el.classList.remove('settle'), 340);
+      // 松手：布料带着惯性甩动并弹回摊平，归位瞬间卡片淡入，形成"布料变成卡片"
+      if (window.ClothFX) window.ClothFX.release(() => {
+        el.classList.remove('cloth-active');
+        // 不做缩放回弹：布料淡出与卡片淡入完全重合，避免两层错位导致闪动
+      });
     }
     if (!wasDrag && onClick) onClick();
   };
@@ -376,7 +429,37 @@ function fillSettings() {
   $('set-autostart').checked = !!cfg.autoLaunch;
   $('set-wind').checked = !!cfg.windEnabled;
   $('set-crease').checked = !!cfg.creaseShadow;
+  CLOTH_FIELDS.forEach(([key]) => {
+    const input = $(`set-${key}`);
+    if (!input) return;
+    if (cfg[key] !== undefined && cfg[key] !== null) input.value = cfg[key];
+    updateClothVal(key);
+  });
   $('test-result').textContent = '';
+}
+
+// 滑块数值同步到右侧标签
+function updateClothVal(key) {
+  const input = $(`set-${key}`);
+  const label = $(`val-${key}`);
+  if (!input || !label) return;
+  const digits = Number(input.dataset.digits) || 0;
+  label.textContent = Number(input.value).toFixed(digits);
+}
+
+// 恢复默认动效参数：重置滑块并立即写入配置（下次抓取生效），设置页保持打开
+function resetClothParams() {
+  const patch = {};
+  CLOTH_FIELDS.forEach(([key]) => {
+    const input = $(`set-${key}`);
+    if (!input) return;
+    input.value = input.defaultValue; // HTML 初始 value 即默认手感
+    updateClothVal(key);
+    patch[key] = Number(input.defaultValue);
+  });
+  window.ds.updateConfig(patch).then((cfg) => {
+    state.config = cfg;
+  });
 }
 
 async function saveSettings() {
@@ -391,6 +474,9 @@ async function saveSettings() {
     windEnabled: $('set-wind').checked,
     creaseShadow: $('set-crease').checked,
   };
+  CLOTH_FIELDS.forEach(([key]) => {
+    patch[key] = Number($(`set-${key}`).value);
+  });
   const keyChanged = patch.apiKey !== state.config.apiKey;
   state.config = await window.ds.updateConfig(patch);
   applyTheme(state.config.theme);
@@ -424,7 +510,6 @@ async function testConnection() {
 function bindEvents() {
   $('btn-refresh').addEventListener('click', () => refresh(true));
   $('btn-settings').addEventListener('click', openSettings);
-  $('btn-mini-settings').addEventListener('click', openSettings);
   $('btn-back').addEventListener('click', () => hideSettings());
 
   // 形态切换下拉菜单（大卡/迷你卡共用逻辑）
@@ -446,8 +531,13 @@ function bindEvents() {
     });
     menu.addEventListener('click', (e) => {
       e.stopPropagation();
-      const mode = e.target.closest('button')?.dataset.mode;
-      if (mode) window.ds.updateConfig({ mode });
+      const item = e.target.closest('button');
+      if (!item) return;
+      if (item.dataset.action === 'settings') {
+        openSettings();
+      } else if (item.dataset.mode) {
+        window.ds.updateConfig({ mode: item.dataset.mode });
+      }
       closeModeMenus();
     });
   });
@@ -467,12 +557,20 @@ function bindEvents() {
     input.type = show ? 'text' : 'password';
     $('btn-toggle-key').textContent = show ? '隐藏' : '显示';
   });
+  CLOTH_FIELDS.forEach(([key]) => {
+    const input = $(`set-${key}`);
+    if (input) input.addEventListener('input', () => updateClothVal(key));
+  });
+  $('btn-cloth-reset').addEventListener('click', resetClothParams);
 
   // 三种形态：任意非按钮区域均可拖动窗口
   const interactiveSel = 'button, input, select, label';
   makeDraggable($('card'), { skip: interactiveSel, cloth: true });
-  makeDraggable($('mini'), { skip: interactiveSel, cloth: true, onClick: () => window.ds.updateConfig({ mode: 'card' }) });
-  makeDraggable($('dot'), { onClick: () => window.ds.updateConfig({ mode: 'card' }) });
+  // 迷你卡/圆点仅拖动，不因点击自动切换形态（切形态走下拉菜单或右键菜单）
+  makeDraggable($('mini'), { skip: interactiveSel, cloth: true });
+  makeDraggable($('dot'), {});
+  // 设置页也可拖动窗口（按钮/输入框除外）
+  makeDraggable($('settings'), { skip: interactiveSel });
 
   document.addEventListener('contextmenu', (e) => {
     e.preventDefault();

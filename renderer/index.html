@@ -91,9 +91,63 @@
           <label class="check"><input id="set-ontop" type="checkbox" /> 窗口置顶</label>
           <label class="check"><input id="set-autostart" type="checkbox" /> 开机自启</label>
         </div>
-        <div class="row">
+        <div class="row wind-row">
           <label class="check"><input id="set-wind" type="checkbox" /> 风效</label>
+          <input id="set-clothWind" type="range" min="0" max="2" step="0.05" value="1" data-digits="2" />
+          <em id="val-clothWind" class="range-val">1.00</em>
+        </div>
+        <div class="row">
           <label class="check"><input id="set-crease" type="checkbox" /> 褶皱折痕阴影</label>
+        </div>
+        <div class="settings-section">
+          <div class="section-title">
+            <span>动效参数</span>
+            <button id="btn-cloth-reset" class="mini-btn reset-btn" type="button">恢复默认</button>
+          </div>
+          <label class="field slider-field">
+            <span>褶皱幅度 <em id="val-clothFold" class="range-val">0.03</em></span>
+            <input id="set-clothFold" type="range" min="0" max="0.12" step="0.005" value="0.03" data-digits="3" />
+          </label>
+          <label class="field slider-field">
+            <span>重力 <em id="val-clothGravity" class="range-val">0.07</em></span>
+            <input id="set-clothGravity" type="range" min="0" max="0.3" step="0.005" value="0.07" data-digits="3" />
+          </label>
+          <label class="field slider-field">
+            <span>空气阻力 <em id="val-clothAirDrag" class="range-val">0.004</em></span>
+            <input id="set-clothAirDrag" type="range" min="0" max="0.02" step="0.001" value="0.004" data-digits="3" />
+          </label>
+          <label class="field slider-field">
+            <span>回弹阻尼 <em id="val-clothDamping" class="range-val">0.985</em></span>
+            <input id="set-clothDamping" type="range" min="0.9" max="1" step="0.005" value="0.985" data-digits="3" />
+          </label>
+          <label class="field slider-field">
+            <span>拖拽滞后 <em id="val-clothDragLag" class="range-val">0.02</em></span>
+            <input id="set-clothDragLag" type="range" min="0" max="0.06" step="0.002" value="0.02" data-digits="3" />
+          </label>
+          <label class="field slider-field">
+            <span>惯性 <em id="val-clothInertia" class="range-val">0.45</em></span>
+            <input id="set-clothInertia" type="range" min="0" max="1.2" step="0.05" value="0.45" data-digits="2" />
+          </label>
+          <label class="field slider-field">
+            <span>褶皱深度上限 <em id="val-clothZMax" class="range-val">10</em></span>
+            <input id="set-clothZMax" type="range" min="2" max="30" step="1" value="10" data-digits="0" />
+          </label>
+          <label class="field slider-field">
+            <span>捏起收拢 <em id="val-clothPinchPull" class="range-val">0.13</em></span>
+            <input id="set-clothPinchPull" type="range" min="0" max="0.4" step="0.01" value="0.13" data-digits="2" />
+          </label>
+          <label class="field slider-field">
+            <span>捏起隆起 <em id="val-clothPinchLift" class="range-val">0.12</em></span>
+            <input id="set-clothPinchLift" type="range" min="0" max="0.4" step="0.01" value="0.12" data-digits="2" />
+          </label>
+          <label class="field slider-field">
+            <span>抓点隆起 <em id="val-clothPinchZ" class="range-val">8</em></span>
+            <input id="set-clothPinchZ" type="range" min="0" max="20" step="0.5" value="8" data-digits="1" />
+          </label>
+          <label class="field slider-field">
+            <span>网格密度 <em id="val-clothDensity" class="range-val">36</em></span>
+            <input id="set-clothDensity" type="range" min="16" max="48" step="1" value="36" data-digits="0" />
+          </label>
         </div>
         <div class="row actions">
           <button id="btn-save" class="primary-btn" type="button">保存</button>
@@ -112,13 +166,13 @@
         <div id="mini-status" class="mini-status">未配置 API Key</div>
       </div>
       <div class="mini-actions">
-        <button id="btn-mini-settings" class="icon-btn" title="设置">⚙</button>
         <div class="mode-switch">
           <button id="btn-mode-mini" class="icon-btn" title="切换形态">▾</button>
           <div id="mode-menu-mini" class="mode-menu hidden">
-            <button type="button" data-mode="card">完整卡片</button>
-            <button type="button" data-mode="mini">迷你卡片</button>
-            <button type="button" data-mode="dot">小圆点</button>
+            <button type="button" data-action="settings">设置</button>
+            <button type="button" data-mode="card">大卡片</button>
+            <button type="button" data-mode="mini">迷你卡</button>
+            <button type="button" data-mode="dot">圆点</button>
           </div>
         </div>
       </div>

@@ -17,7 +17,7 @@ const CARD_DIAG = Math.round(Math.hypot(328, 220));
 const CARD_W = 328 + CARD_DIAG * 2;
 const CARD_H = 220 + CARD_DIAG * 2;
 const MINI_W = 216;
-const MINI_H = 88;
+const MINI_H = 124;  // 加高一点，让迷你卡竖向下拉菜单完整显示
 const DOT_W = 74;
 const DOT_H = 74;
 const SIZES = {
@@ -37,6 +37,19 @@ const DEFAULT_CONFIG = {
   autoLaunch: false,
   creaseShadow: false,            // 褶皱折痕阴影（z 落差明暗），默认关闭
   windEnabled: true,              // 风效（自动飘动），默认开启
+  // 布料动效参数（可在设置页调整，默认值 = 打磨好的手感）
+  clothWind: 1,                   // 风力总强度
+  clothFold: 0.03,                // 褶皱幅度（竖向褶皱波力）
+  clothGravity: 0.07,             // 重力
+  clothAirDrag: 0.004,            // 空气阻力
+  clothDamping: 0.985,            // 回弹阻尼
+  clothDragLag: 0.02,             // 拖拽滞后
+  clothInertia: 0.45,             // 惯性
+  clothZMax: 10,                  // 褶皱深度上限
+  clothPinchPull: 0.13,           // 捏起收拢力度
+  clothPinchLift: 0.12,           // 捏起隆起力度
+  clothPinchZ: 8,                 // 抓点隆起高度
+  clothDensity: 36,               // 网格密度（列数）
   mode: 'card',                   // card | mini | dot
   pos: null,                      // { x, y }
 };
@@ -529,6 +542,22 @@ function createWindow() {
               img2.toPNG()
             );
             console.log('[smoke] mini screenshot saved');
+            // 迷你卡下拉菜单应完整显示在窗口内
+            const miniMenu = await win.webContents.executeJavaScript(`(async () => {
+              document.getElementById('btn-mode-mini').click();
+              await new Promise((r) => setTimeout(r, 150));
+              const m = document.getElementById('mode-menu-mini');
+              const r = m.getBoundingClientRect();
+              const fits = r.left >= 0 && r.right <= window.innerWidth + 1 &&
+                r.top >= 0 && r.bottom <= window.innerHeight + 1;
+              document.getElementById('btn-mode-mini').click();
+              return {
+                rect: [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)],
+                win: [window.innerWidth, window.innerHeight],
+                fits,
+              };
+            })()`);
+            console.log('[smoke-minimenu]', JSON.stringify(miniMenu));
             await win.webContents.executeJavaScript(`window.ds.updateConfig({ mode: 'card' })`);
             const dot = await win.webContents.executeJavaScript(`(async () => {
               await window.ds.updateConfig({ mode: 'dot' });
@@ -575,6 +604,8 @@ function createWindow() {
             await new Promise((r) => setTimeout(r, 300));
             const posAfter = win.getPosition();
             console.log('[smoke-drag] moveBy delta:', posAfter[0] - posBefore[0], posAfter[1] - posBefore[1]);
+            await win.webContents.executeJavaScript(`window.ds.moveTo(${posBefore[0]}, ${posBefore[1]})`);
+            await new Promise((r) => setTimeout(r, 300));
             const settingsSwitch = await win.webContents.executeJavaScript(`(async () => {
               document.getElementById('btn-settings').click();
               await new Promise((r) => setTimeout(r, 300));
@@ -596,8 +627,13 @@ function createWindow() {
               winSize: win.getSize(),
               pos: win.getPosition(),
             }));
-            // 从迷你卡片点击设置按钮
-            await win.webContents.executeJavaScript(`document.getElementById('btn-mini-settings').click()`);
+            // 从迷你卡片下拉菜单顶部打开设置
+            await win.webContents.executeJavaScript(`(async () => {
+              document.getElementById('btn-mode-mini').click();
+              await new Promise((r) => setTimeout(r, 150));
+              const item = document.querySelector('#mode-menu-mini button[data-action="settings"]');
+              item.click();
+            })()`);
             await new Promise((r) => setTimeout(r, 500));
             const miniSettings = await win.webContents.executeJavaScript(`(() => {
               const $ = (id) => document.getElementById(id);
@@ -892,7 +928,7 @@ function registerIpc() {
 
   ipcMain.handle('window:move-to', (_e, x, y) => {
     if (!win) return;
-    win.setPosition(Math.round(x), Math.round(y));
+    win.setPosition(Math.round(Number(x)), Math.round(Number(y)));
   });
 
   ipcMain.handle('window:get-position', () => {
