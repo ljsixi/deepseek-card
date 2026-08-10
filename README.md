@@ -31,12 +31,6 @@ DeepSeek API 余额桌面小卡片 —— 半透明、可拖动、始终置顶�
   <img src="assets/readme/demo-drag.gif" width="560" alt="拖拽演示：卡片在桌面上被拖着移动，布料随之飘动">
 </p>
 
-布料细节（褶皱明暗、抓取点捏起、惯性甩动）：
-
-<p align="center">
-  <img src="assets/screenshot-cloth.png" width="92%" alt="抓取卡片时布料物理飘动的褶皱细节">
-</p>
-
 | 完整卡片 | 迷你卡 | 圆点 |
 | --- | --- | --- |
 | <img src="assets/screenshot-card.png" width="230" alt="完整卡片：余额、更新时间、形态切换与设置"> | <img src="assets/screenshot-mini.png" width="150" alt="迷你卡片：只显示余额和更新时间"> | <img src="assets/screenshot-dot.png" width="52" alt="圆点：只显示余额数字"> |
