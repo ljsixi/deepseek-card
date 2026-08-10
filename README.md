@@ -6,6 +6,8 @@
 
 DeepSeek API 余额桌面小卡片 —— 半透明、可拖动、始终置顶，还能折叠成迷你卡或圆点。
 
+和市面上常见的余额监控悬浮窗不同，它的抓取交互是真正的 Verlet 布料物理模拟——市面上没有第二块这样的卡片。
+
 [![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0f172a?style=flat-square)]()
 [![Electron](https://img.shields.io/badge/Electron-37-47848F?style=flat-square)]()
 [![API](https://img.shields.io/badge/API-DeepSeek%20Official-4d7cfe?style=flat-square)]()
@@ -15,10 +17,22 @@ DeepSeek API 余额桌面小卡片 —— 半透明、可拖动、始终置顶�
 
 ## 先看效果
 
-抓取卡片时，卡片快照会贴到一块 Verlet 布料上，被风鼓起真实的褶皱。拖动方向与速度会通过惯性影响飘动，松手后布料带着惯性甩动、弹回摊平，最后变回卡片。
+抓住卡片，它会像一块柔软的布料被风鼓起、跟着你的手飘动；松手后带着惯性甩动、弹回摊平，最后变回卡片。
 
 <p align="center">
-  <img src="assets/screenshot-cloth.png" width="92%" alt="抓取卡片时布料物理飘动的效果">
+  <img src="assets/readme/demo.gif" width="92%" alt="布料特写：抓住卡片左下角，其余部分自然垂落，松手回弹摊平">
+</p>
+
+拖着它在桌面上走，卡片跟着你的手移动，布料一边飘动一边拖出褶皱：
+
+<p align="center">
+  <img src="assets/readme/demo-drag.gif" width="92%" alt="拖拽演示：卡片在桌面上被拖着移动，布料随之飘动">
+</p>
+
+布料细节（褶皱明暗、抓取点捏起、惯性甩动）：
+
+<p align="center">
+  <img src="assets/screenshot-cloth.png" width="92%" alt="抓取卡片时布料物理飘动的褶皱细节">
 </p>
 
 | 完整卡片 | 迷你卡 | 圆点 |
@@ -27,7 +41,7 @@ DeepSeek API 余额桌面小卡片 —— 半透明、可拖动、始终置顶�
 
 ## 为什么不一样
 
-- **布料物理抓取**：Verlet 质点-弹簧网格 + 阵风 + 法线光照。以抓取点为唯一固定点，离手越远的布料越滞后，抓取位置不同动效就不同；拖动越快飘得越猛，松手后平滑回弹摊平，视觉上"布料变成卡片"，不割裂。
+- **布料物理抓取（核心亮点）**：Verlet 质点-弹簧网格 + 阵风 + 法线光照。以抓取点为唯一固定点，离手越远的布料越滞后，抓取位置不同动效就不同；拖动越快飘得越猛，松手后平滑回弹摊平，视觉上"布料变成卡片"，不割裂。
 - **三种形态**：完整卡片 → 迷你卡 → 圆点，通过右上角下拉菜单或右键菜单随时切换。
 - **余额变动动效**：每次刷新余额变化时，数字高亮闪烁，并在余额旁弹出 `-¥1.00` / `+¥0.50` 浮动标签。
 - **低余额提醒**：低于阈值时卡片变红并发送一次系统通知。
