@@ -20,13 +20,13 @@ DeepSeek API 余额桌面小卡片 —— 半透明、可拖动、始终置顶�
 抓住卡片，它会像一块柔软的布料被风鼓起、跟着你的手飘动；松手后带着惯性甩动、弹回摊平，最后变回卡片。
 
 <p align="center">
-  <img src="assets/readme/demo.gif" width="92%" alt="布料特写：抓住卡片左下角，其余部分自然垂落，松手回弹摊平">
+  <img src="assets/readme/demo.gif" width="420" alt="布料特写：抓住卡片左下角，其余部分自然垂落，松手回弹摊平">
 </p>
 
 拖着它在桌面上走，卡片跟着你的手移动，布料一边飘动一边拖出褶皱：
 
 <p align="center">
-  <img src="assets/readme/demo-drag.gif" width="92%" alt="拖拽演示：卡片在桌面上被拖着移动，布料随之飘动">
+  <img src="assets/readme/demo-drag.gif" width="560" alt="拖拽演示：卡片在桌面上被拖着移动，布料随之飘动">
 </p>
 
 布料细节（褶皱明暗、抓取点捏起、惯性甩动）：
