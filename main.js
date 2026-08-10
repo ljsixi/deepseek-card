@@ -49,7 +49,7 @@ const DEFAULT_CONFIG = {
   clothPinchPull: 0.13,           // 捏起收拢力度
   clothPinchLift: 0.12,           // 捏起隆起力度
   clothPinchZ: 8,                 // 抓点隆起高度
-  clothDensity: 36,               // 网格密度（列数）
+  clothDensity: 20,               // 网格密度（列数）
   mode: 'card',                   // card | mini | dot
   pos: null,                      // { x, y }
 };

@@ -38,7 +38,7 @@ function num(v, d) {
 
 // 配置字段 -> 布料物理参数（密度同时映射行列）
 function clothParamsFromConfig(cfg) {
-  const density = Math.max(8, Math.round(num(cfg.clothDensity, 36)));
+  const density = Math.max(8, Math.round(num(cfg.clothDensity, 20)));
   return {
     cols: density,
     rows: Math.max(8, Math.round((density * 26) / 36)),

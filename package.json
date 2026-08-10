@@ -2,6 +2,7 @@
   "name": "deepseek-balance-card",
   "version": "1.0.0",
   "description": "可放桌面上的 DeepSeek API 余额小卡片",
+  "productName": "DeepSeek Balance Card",
   "main": "main.js",
   "author": "",
   "license": "MIT",
@@ -10,6 +11,48 @@
     "icon": "node scripts/gen-icon.js"
   },
   "devDependencies": {
-    "electron": "^37.2.0"
+    "electron": "^37.2.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.deepseek.balance-card",
+    "productName": "DeepSeek Balance Card",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "assets/icon.png",
+      "assets/tray.png"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "DeepSeek-Balance-Card-${version}-portable.exe"
+    },
+    "nsis": {
+      "artifactName": "DeepSeek-Balance-Card-${version}-setup.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
   }
 }
