@@ -8,6 +8,8 @@ DeepSeek API 余额桌面小卡片 —— 半透明、可拖动、始终置顶�
 
 和市面上常见的余额监控悬浮窗不同，它的抓取交互是真正的 Verlet 布料物理模拟——市面上没有第二块这样的卡片。
 
+布料引擎已开源为 [**cloth-fx**](https://github.com/ljsixi/cloth-fx)：零依赖，把任意 DOM 元素或图片变成可拖拽的布料。
+
 [![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0f172a?style=flat-square)]()
 [![Electron](https://img.shields.io/badge/Electron-37-47848F?style=flat-square)]()
 [![API](https://img.shields.io/badge/API-DeepSeek%20Official-4d7cfe?style=flat-square)]()
